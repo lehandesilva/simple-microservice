@@ -9,8 +9,8 @@ const RMQ_PRODUCER_PORT = 4201;
 const RMQ_USER_NAME = "admin";
 const RMQ_PASSWORD = "admin";
 //const RMQ_HOST = '20.90.112.187' // If mq is running in cloud but attaching from local vscode
-//const RMQ_HOST = 'rabbitmq'    // Docker DNS for mq if conecting from a container whether local or not
-const RMQ_HOST = "localhost"; // Connect to local container from vscode
+const RMQ_HOST = "rabbitmq"; // Docker DNS for mq if conecting from a container whether local or not
+//const RMQ_HOST = "localhost"; // Connect to local container from vscode
 //const RMQ_HOST = host.docker.internal
 let gConnection; // File scope so functions can use them
 let gChannel;
