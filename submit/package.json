@@ -4,11 +4,12 @@
   "description": "",
   "main": "submit.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node submit.js"
   },
-  "author": "",
+  "author": "Lehan",
   "license": "ISC",
   "dependencies": {
-    "amqplib": "^0.10.3"
+    "amqplib": "^0.10.3",
+    "express": "^4.18.3"
   }
 }

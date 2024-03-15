@@ -1,0 +1,29 @@
+#queue name env
+services:
+  etl:
+    image: lelel/etl
+    build:
+      context: ./etl
+    container_name: etl
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - QUEUE_NAME=SUBMITTED_JOKES
+      - MYSQL_CONTAINER_SERVICE=mysql
+      - MYSQL_CONTAINER_USER=${MYSQL_USER}
+      - MYSQL_CONTAINER_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_CONTAINER_DATABASE=${MYSQL_DATABASE}
+    depends_on:
+      - mysql
+    ports:
+      - 4001:3001
+
+  mysql:
+    image: mysql
+    container_name: mysql
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - 4002:3306

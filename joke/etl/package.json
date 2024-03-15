@@ -1,15 +1,17 @@
 {
-  "name": "mod",
+  "name": "etl",
   "version": "1.0.0",
   "description": "",
-  "main": "moderate.js",
+  "main": "etl.js",
   "scripts": {
-    "start": "node moderate.js"
+    "start": "node etl.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "amqplib": "^0.10.3",
-    "express": "^4.18.3"
+    "express": "^4.18.3",
+    "mysql2": "^3.9.2",
+    "sequelize": "^6.37.1"
   }
 }

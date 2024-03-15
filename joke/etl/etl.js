@@ -1,15 +1,16 @@
 const express = require("express");
 const app = express();
+const db = require("./util/database-functions");
 const amqp = require("amqplib");
 
 const APP_CONSUMER1_PORT = 3001;
-const RMQ_CONSUMER1_PORT = 5672;
-const QUEUE_NAME = process.env.QUEUE_NAME || "joke";
+const RMQ_CONSUMER1_PORT = 4201;
+const QUEUE_NAME = process.env.QUEUE_NAME;
 const RMQ_USER_NAME = "admin";
 const RMQ_PASSWORD = "admin";
 //const RMQ_HOST = '10.1.0.8'  // Private IP of the vm hosting rabbitmq
-const RMQ_HOST = "localhost"; // If accessing local mq container
-//const RMQ_HOST = 'host.docker.internal'
+// const RMQ_HOST = "localhost"; // If accessing local mq container
+const RMQ_HOST = "host.docker.internal";
 //const RMQ_HOST = '20.108.32.75'
 
 app.get("/", (req, res) => {
@@ -20,14 +21,20 @@ const server = app.listen(APP_CONSUMER1_PORT, () =>
   console.log(`Listening on port ${APP_CONSUMER1_PORT}`)
 );
 
+app.get("/createTable", async (req, res) => {
+  try {
+    await db.createTable();
+  } catch (error) {}
+});
+
 async function getMessages(channel, queue) {
   try {
     await channel.assertQueue(queue, { durable: true }); // Connect to durable queue or create if not there
-
     // Create callback that will listen for queued message availability
-    channel.consume(queue, (message) => {
+    channel.consume(queue, async (message) => {
       let msg = JSON.parse(message.content.toString()); // Convert message to string then json -> msg
       console.log(msg); // Just output or, say write to a file, database or whatever
+      await db.insertJoke(msg.joke, msg.punchline, msg.type);
       channel.ack(message); // Ack message so it will be removed from the queue
     });
   } catch (err) {
