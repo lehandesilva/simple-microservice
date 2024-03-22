@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Submit Form</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <h1>Submit Joke</h1>
+    <form action="" method="post" id="jokeForm">
+      <label for="joke">Joke:</label>
+      <input type="text" id="joke" name="joke" />
+
+      <label for="punchline">Punchline:</label>
+      <input type="text" id="punchline" name="punchline" />
+
+      <label for="type">Type:</label>
+      <select id="typeDropdown" name="type"></select>
+      <br />
+
+      <button type="submit">Submit Joke</button>
+    </form>
+
+    <script>
+      let isDropdownClicked = false;
+      async function getTypes() {
+        const response = await fetch("http://20.254.69.110/submit/types");
+        const data = await response.json();
+        const typeSelect = document.getElementById("typeDropdown");
+        if (data && Array.isArray(data)) {
+          typeSelect.innerHTML = ""; // Clear existing options
+          data.forEach((type) => {
+            const option = document.createElement("option");
+            option.value = type.type;
+            option.textContent = type.type;
+            typeSelect.appendChild(option); // Append new options
+          });
+        }
+      }
+
+      function deleteJoke() {
+        document.getElementById("joke").value = "";
+        document.getElementById("punchline").value = "";
+      }
+
+      // Function to handle form submission
+      async function handleSubmit(event) {
+        event.preventDefault(); // Prevent default form submission behavior
+        const formData = {
+          joke: document.getElementById("joke").value,
+          punchline: document.getElementById("punchline").value,
+          type: document.getElementById("typeDropdown").value,
+        }; // Get form data
+        const url = "http://20.254.69.110/submit/sub"; // Form action URL
+
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
+          });
+          if (!response.ok) {
+            throw new Error("Failed to submit form");
+          } else {
+            deleteJoke();
+          }
+        } catch (error) {
+          console.error("Error submitting form:", error);
+        }
+      }
+
+      // Add form submission event listener
+      document
+        .getElementById("jokeForm")
+        .addEventListener("submit", handleSubmit);
+      document
+        .getElementById("typeDropdown")
+        .addEventListener("mousedown", function () {
+          if (!isDropdownClicked) {
+            getTypes();
+            isDropdownClicked = true;
+          } else {
+            isDropdownClicked = false;
+          }
+        });
+      window.onload = getTypes;
+    </script>
+  </body>
+</html>

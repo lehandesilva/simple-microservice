@@ -1,0 +1,33 @@
+_format_version: "3.0"
+
+services:
+  - name: joke
+    url: http://10.0.0.9:4000
+    routes:
+      - name: joke
+        paths:
+          - /joke/
+
+  - name: submit
+    url: http://10.0.0.5:4200
+    routes:
+      - name: submit
+        paths:
+          - /submit/
+
+  - name: moderate
+    url: http://10.0.0.7:4100
+    routes:
+      - name: moderate
+        paths:
+          - /moderate/
+
+plugins:
+  - name: rate-limiting
+    service: joke
+    config:
+      minute: 900
+  - name: rate-limiting
+    service: submit
+    config:
+      minute: 600

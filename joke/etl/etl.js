@@ -3,22 +3,19 @@ const app = express();
 const db = require("./util/database-functions");
 const amqp = require("amqplib");
 
-const APP_CONSUMER1_PORT = 3001;
-const RMQ_CONSUMER1_PORT = 4201;
+const APP_CONSUMER_PORT = 3001;
+const RMQ_CONSUMER_PORT = 4101;
 const QUEUE_NAME = process.env.QUEUE_NAME;
 const RMQ_USER_NAME = "admin";
 const RMQ_PASSWORD = "admin";
-//const RMQ_HOST = '10.1.0.8'  // Private IP of the vm hosting rabbitmq
-// const RMQ_HOST = "localhost"; // If accessing local mq container
-const RMQ_HOST = "host.docker.internal";
-//const RMQ_HOST = '20.108.32.75'
+const RMQ_HOST = "10.0.0.7";
 
 app.get("/", (req, res) => {
   res.send(`ETL is up`);
 });
 
-const server = app.listen(APP_CONSUMER1_PORT, () =>
-  console.log(`Listening on port ${APP_CONSUMER1_PORT}`)
+const server = app.listen(APP_CONSUMER_PORT, () =>
+  console.log(`Listening on port ${APP_CONSUMER_PORT}`)
 );
 
 app.get("/createTable", async (req, res) => {
@@ -33,9 +30,10 @@ async function getMessages(channel, queue) {
     // Create callback that will listen for queued message availability
     channel.consume(queue, async (message) => {
       let msg = JSON.parse(message.content.toString()); // Convert message to string then json -> msg
-      console.log(msg); // Just output or, say write to a file, database or whatever
+      console.log(msg);
       await db.insertJoke(msg.joke, msg.punchline, msg.type);
       channel.ack(message); // Ack message so it will be removed from the queue
+      console.log("Joke removed from queue db", msg);
     });
   } catch (err) {
     throw err;
@@ -62,12 +60,12 @@ async function createConnection(conStr) {
 // You need to acknowledge receipt for it to be deleted
 // Demo shows how you can look for specific queue and even specific messages - other apps may be looking for others
 (async () => {
-  // const conStr = `amqp://${RMQ_USER_NAME}:${RMQ_PASSWORD}@${RMQ_HOST}:${RMQ_CONSUMER1_PORT}/`
+  // const conStr = `amqp://${RMQ_USER_NAME}:${RMQ_PASSWORD}@${RMQ_HOST}:${RMQ_CONSUMER_PORT}/`
   // Alternatively, create connection with an object to provide settings other than default
 
   const conStr = {
     hostname: RMQ_HOST,
-    port: RMQ_CONSUMER1_PORT,
+    port: RMQ_CONSUMER_PORT,
     username: RMQ_USER_NAME,
     password: RMQ_PASSWORD,
     vhost: "/",
@@ -88,7 +86,7 @@ async function createConnection(conStr) {
   }
 })().catch((err) => {
   console.log(
-    `Shutting down node server listening on port ${APP_CONSUMER1_PORT}`
+    `Shutting down node server listening on port ${APP_CONSUMER_PORT}`
   );
   server.close(); // Close the http server created with app.listen
   console.log(`Closing app with process.exit(1)`);

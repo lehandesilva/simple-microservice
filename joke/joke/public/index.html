@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Joke Service</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <h1>Joke Service</h1>
+
+    <!-- Dropdown to select joke type -->
+    <select id="typeSelect">
+      <option value="Any">Any</option>
+    </select>
+    <button onclick="getJoke()">Get Joke</button>
+
+    <!-- Container for displaying joke -->
+    <div id="jokeContainer"></div>
+
+    <script>
+      let isDropdownClicked = false;
+      let url;
+
+      async function getJoke() {
+        const selectedType = document.getElementById("typeSelect").value;
+        selectedType == "Any"
+          ? (url = "http://20.254.69.110/joke/joke")
+          : (url = `http://20.254.69.110/joke/joke?type=${selectedType}`);
+        const response = await fetch(url);
+        const data = await response.json();
+        const jokeContainer = document.getElementById("jokeContainer");
+        if (data == null) {
+          jokeContainer.innerHTML =
+            "<p>No jokes available for the selected type.</p>";
+        } else {
+          jokeContainer.innerHTML = `<p><strong>Joke:</strong> ${data[0].joke}</p><p><strong>Punchline:</strong> ${data[0].punchline}</p>`;
+        }
+      }
+
+      async function getTypes() {
+        const response = await fetch("http://20.254.69.110/joke/type");
+        const data = await response.json();
+        const typeSelect = document.getElementById("typeSelect");
+        if (data && Array.isArray(data)) {
+          typeSelect.innerHTML = ""; // Clear existing options
+          const anyOption = document.createElement("option");
+          anyOption.textContent = "Any";
+          typeSelect.appendChild(anyOption);
+          data.forEach((type) => {
+            const option = document.createElement("option");
+            option.value = type.type;
+            option.textContent = type.type;
+            typeSelect.appendChild(option); // Append new options
+          });
+        }
+      }
+
+      // Add event listener for typeSelect click
+      document
+        .getElementById("typeSelect")
+        .addEventListener("mousedown", function () {
+          if (!isDropdownClicked) {
+            getTypes();
+            isDropdownClicked = true;
+          } else {
+            isDropdownClicked = false;
+          }
+        });
+
+      // Initial call to get types when the page loads
+      window.onload = getTypes;
+    </script>
+  </body>
+</html>

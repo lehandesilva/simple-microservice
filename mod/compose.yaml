@@ -1,51 +1,42 @@
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Docker compose reference guide at
-# https://docs.docker.com/compose/compose-file/
-
-# Here the instructions define your application as a service called "server".
-# This service is built from the Dockerfile in the current directory.
-# You can add other services your application may depend on here, such as a
-# database or a cache. For examples, see the Awesome Compose repository:
-# https://github.com/docker/awesome-compose
 services:
-  server:
+  rabbitmq-mod:
+    image: rabbitmq:3-management
+    hostname: rabbitmq # give the cluster a meaningful name
+    container_name: rabbitmq-mod
+    restart: unless-stopped
+
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin
+      - RABBITMQ_USER=root
+      - RABBITMQ_PASS=root
+
+    ports:
+      - 4101:5672 # Message broker. Make ports same as we won't be accessing from internet
+      - 4102:15672 # Management interface. Make ports same as it's meant to be accessed via the internet
+
+    volumes:
+      - rabbit-test-prod-vol:/var/lib/rabbitmq/ # Where to store the queued data
+
+  moderate:
+    image: jokecontainer.azurecr.io/moderate
+    pull_policy: always # Attempt to always pull latest image from docker. Lazy if not using versioning. And slow as up will always pull
     build:
       context: .
+    container_name: moderate
+    restart: unless-stopped
     environment:
-      NODE_ENV: production
+      - PROD_QUEUE=MODERATED_JOKES
+      - CON_QUEUE=SUBMITTED_JOKES
+    depends_on:
+      - rabbitmq-mod
+    volumes:
+      - typesVolume:/data
     ports:
-      - 3100:3100
+      - 4100:3100
 
-# The commented out section below is an example of how to define a PostgreSQL
-# database that your application can use. `depends_on` tells Docker Compose to
-# start the database before your application. The `db-data` volume persists the
-# database data between container restarts. The `db-password` secret is used
-# to set the database password. You must create `db/password.txt` and add
-# a password of your choosing to it before running `docker-compose up`.
-#     depends_on:
-#       db:
-#         condition: service_healthy
-#   db:
-#     image: postgres
-#     restart: always
-#     user: postgres
-#     secrets:
-#       - db-password
-#     volumes:
-#       - db-data:/var/lib/postgresql/data
-#     environment:
-#       - POSTGRES_DB=example
-#       - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
-#     expose:
-#       - 5432
-#     healthcheck:
-#       test: [ "CMD", "pg_isready" ]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
-# volumes:
-#   db-data:
-# secrets:
-#   db-password:
-#     file: db/password.txt
-
+volumes:
+  rabbit-test-prod-vol:
+    driver: local
+  typesVolume:
+    driver: local

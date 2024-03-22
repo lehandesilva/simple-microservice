@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moderate Form</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <h1>Moderate Form</h1>
+    <form id="jokeForm">
+      <label for="joke">Joke:</label>
+      <input type="text" id="joke" name="joke" /><br />
+
+      <label for="punchline">Punchline:</label>
+      <input type="text" id="punchline" name="punchline" /><br />
+
+      <label for="type">Type:</label>
+      <select id="typeDropdown" name="type"></select>
+      <br />
+
+      <button type="button" onclick="addNewType()">Add new Type</button>
+
+      <div id="newTypeContainer"></div>
+
+      <button type="button" onclick="deleteJoke()">Delete Joke</button>
+      <button type="submit">Submit Joke</button>
+    </form>
+    <div id="jokeContainer"></div>
+    <script>
+      let isDropdownClicked = false;
+
+      async function getTypes() {
+        const response = await fetch("http://20.254.69.110/moderate/types");
+        const data = await response.json();
+        const typeSelect = document.getElementById("typeDropdown");
+        if (data && Array.isArray(data)) {
+          typeSelect.innerHTML = ""; // Clear existing options
+          data.forEach((type) => {
+            const option = document.createElement("option");
+            option.value = type.type;
+            option.textContent = type.type;
+            typeSelect.appendChild(option); // Append new options
+          });
+        }
+      }
+
+      function addNewType() {
+        const typeDropDown = document.getElementById("typeDropdown");
+        const newTypeContainer = document.getElementById("newTypeContainer");
+        const newTypeInput = document.createElement("input");
+        newTypeInput.type = "text";
+        newTypeInput.name = "type";
+        // newTypeContainer.innerHTML = "";
+        newTypeContainer.appendChild(newTypeInput);
+        typeDropdown.name = "";
+        typeDropdown.value = "";
+      }
+
+      function deleteJoke() {
+        document.getElementById("joke").value = "";
+        document.getElementById("punchline").value = "";
+      }
+
+      // Function to update form inputs with jokeData
+      function updateFormInputs(jokeData) {
+        document.getElementById("joke").value = jokeData.joke;
+        document.getElementById("punchline").value = jokeData.punchline;
+        const typeDropdown = document.getElementById("typeDropdown");
+        for (let option of typeDropdown.options) {
+          if (option.value === jokeData.type) {
+            option.selected = true;
+            break;
+          }
+        }
+      }
+
+      // Fetch updated data every few seconds
+      function fetchUpdatedData() {
+        if (document.getElementById("joke").value.trim() == "") {
+          const jokeContainer = document.getElementById("jokeContainer");
+          fetch("http://20.254.69.110/moderate/mod")
+            .then((response) => {
+              if (response.status === 204) {
+                jokeContainer.innerHTML = "<p>No jokes to moderate.</p>";
+              } else {
+                return response.json();
+              }
+            })
+            .then((data) => {
+              if (data && Object.keys(data).length > 0) {
+                jokeContainer.innerHTML = "";
+                updateFormInputs(data);
+              }
+            })
+            .catch((error) =>
+              console.error("Error fetching updated data:", error)
+            );
+        }
+      }
+      // Function to handle form submission
+      async function handleSubmit(event) {
+        event.preventDefault(); // Prevent default form submission behavior
+        const jokeInput = document.getElementById("joke");
+        const punchlineInput = document.getElementById("punchline");
+        const typeDropdown = document.getElementById("typeDropdown");
+
+        // Check if there's a new type input
+        const newTypeInput = document.querySelector("#newTypeContainer input");
+        let typeValue = typeDropdown.value; // Default type value from dropdown
+
+        if (newTypeInput && newTypeInput.value.trim() !== "") {
+          // If new type input has a value, use it as the type
+          typeValue = newTypeInput.value.trim();
+        }
+
+        const formData = {
+          joke: jokeInput.value,
+          punchline: punchlineInput.value,
+          type: typeValue,
+        };
+        const url = "http://20.254.69.110/moderate/mod"; // Form action URL
+
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
+          });
+          if (!response.ok) {
+            throw new Error("Failed to submit form");
+          } else {
+            deleteJoke();
+            newTypeInput.remove();
+          }
+        } catch (error) {
+          console.error("Error submitting form:", error);
+        }
+      }
+
+      // Add form submission event listener
+      document
+        .getElementById("jokeForm")
+        .addEventListener("submit", handleSubmit);
+
+      document
+        .getElementById("typeDropdown")
+        .addEventListener("mousedown", function () {
+          if (!isDropdownClicked) {
+            getTypes();
+            isDropdownClicked = true;
+          } else {
+            isDropdownClicked = false;
+          }
+        });
+
+      window.onload = getTypes;
+      // Fetch updated data initially and then every 5 seconds
+      setInterval(fetchUpdatedData, 5000);
+    </script>
+  </body>
+</html>

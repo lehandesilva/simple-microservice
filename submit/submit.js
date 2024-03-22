@@ -1,34 +1,108 @@
-// RabbitMQ demo. Does nothing fancy - uses defaults. Queue is not set to be durable after container restart
 const express = require("express");
 const app = express();
-const amqp = require("amqplib"); // Documentation here: https://www.npmjs.com/package/amqp
+const amqp = require("amqplib");
+const fs = require("fs");
+const path = require("path");
+const swaggerUi = require("swagger-ui-express");
+const swaggerJsDoc = require("swagger-jsdoc");
 
-const APP_PRODUCER_PORT = 3200; // Using a higher port than usual to avoid any clashes with 3000 serries
-const RMQ_PRODUCER_PORT = 5672; // Used 5673 to avoid port clash if running more than one local Rabbit container. 5672 if in container
+const APP_PRODUCER_PORT = 3200;
+const RMQ_PRODUCER_PORT = 5672;
 const RMQ_USER_NAME = "admin";
 const RMQ_PASSWORD = "admin";
-//const RMQ_HOST = '20.90.112.187' // If mq is running in cloud but attaching from local vscode
-const RMQ_HOST = "rabbitmq"; // Docker DNS for mq if conecting from a container whether local or not
-// const RMQ_HOST = "localhost"; // Connect to local container from vscode
+const RMQ_HOST = "rabbitmq";
+const JOKES_SERVICE_HOST = "10.0.0.9";
+const JOKES_SERVICE_PORT = "4000";
 
 let gConnection; // File scope so functions can use them
 let gChannel;
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, "public")));
+
+// Swagger definition
+const swaggerOptions = {
+  swaggerDefinition: {
+    info: {
+      title: "Joke Service API",
+      description: "API documentation for Joke Service",
+      contact: {
+        name: "Your Name",
+      },
+      servers: ["http://20.254.69.110/submit"],
+    },
+  },
+  apis: ["./submit.js"], // Path to your routes file
+};
+
+const swaggerSpec = swaggerJsDoc(swaggerOptions);
+
+// Serve Swagger UI documentation
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get("/", (req, res) => {
-  res.sendFile("submit.html", { root: __dirname });
+  res.sendFile("index.html", { root: __dirname });
 });
-
-app.post("/submitJoke", async (req, res) => {
-  console.log(req.body);
+/**
+ * @swagger
+ * /submit/sub:
+ *   post:
+ *     description: Submit a joke to Joke Service
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               joke:
+ *                 type: string
+ *               punchline:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *     responses:
+ *       '202':
+ *         description: Joke submitted successfully
+ *       '500':
+ *         description: Internal server error
+ */
+app.post("/sub", async (req, res) => {
   try {
     const { joke, punchline, type } = req.body;
     await queueJoke(gChannel, joke, punchline, type);
+    console.log("Joke queued", joke, punchline, type);
     res.sendStatus(202);
   } catch (err) {
     res.status(500).send(err);
+  }
+});
+/**
+ * @swagger
+ * /submit/types:
+ *   get:
+ *     description: Get types data from Joke Service
+ *     responses:
+ *       '200':
+ *         description: A successful response
+ *       '500':
+ *         description: Internal server error
+ */
+app.get("/types", async (req, res) => {
+  try {
+    const response = await fetch(
+      `http://${JOKES_SERVICE_HOST}:${JOKES_SERVICE_PORT}/type`
+    );
+    const data = await response.json();
+    const filePath = path.join(__dirname, "data", "typesData.json");
+    fs.writeFileSync(filePath, JSON.stringify(data));
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Error fetching types:", error);
+    const filePath = path.join(__dirname, "data", "typesData.json");
+    const response = fs.readFileSync(filePath, "utf8");
+    const typesData = JSON.parse(response);
+    res.json(typesData);
   }
 });
 
@@ -44,7 +118,6 @@ async function queueJoke(channel, joke, punchline, type) {
 
   try {
     await channel.assertQueue(queue, { durable: true });
-    console.log("Queue created");
     await channel.sendToQueue(
       queue,
       Buffer.from(JSON.stringify({ joke, punchline, type })),
@@ -52,7 +125,6 @@ async function queueJoke(channel, joke, punchline, type) {
         persistent: true,
       }
     );
-    console.log(`Added ${joke} of ${type} to ${queue}`);
   } catch (error) {
     console.log("Faied to write joke to queue");
   }

@@ -1,8 +1,8 @@
 services:
-  rabbitmq:
+  rabbitmq-sub:
     image: rabbitmq:3-management
     hostname: rabbitmq # give the cluster a meaningful name
-    container_name: rabbitmq
+    container_name: rabbitmq-sub
     restart: unless-stopped
 
     environment:
@@ -19,18 +19,21 @@ services:
       - rabbit-test-prod-vol:/var/lib/rabbitmq/ # Where to store the queued data
 
   submit:
-    image: lelel/submit
-    #   pull_policy: always # Attempt to always pull latest image from docker. Lazy if not using versioning. And slow as up will always pull
+    image: jokecontainer.azurecr.io/submit
+    pull_policy: always # Attempt to always pull latest image from docker. Lazy if not using versioning. And slow as up will always pull
     build:
       context: . # compose.yaml in current dir
     container_name: submit
     restart: unless-stopped # If it stops and I didnt' stop it then have another go
     depends_on:
-      - rabbitmq
-
+      - rabbitmq-sub
+    volumes:
+      - typesVolume:/data
     ports:
       - 4200:3200
 
 volumes:
   rabbit-test-prod-vol:
+    driver: local
+  typesVolume:
     driver: local
